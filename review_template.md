@@ -54,41 +54,47 @@ For each issue you find, note: where it is (file + function), what's wrong, and 
 ### Summary
 *What does this PR do? (1–2 sentences in your own words)*
 
->
+> This PR creates the `GET /lists/<list_id>/stats` endpoint and corresponding service function to return the aggregate stats of a grocery list.
 
 ### Issues
 
 **Issue 1**
-- Location:
-- What's wrong:
-- Why it matters:
-- Suggested fix:
+- Location: `pr2_list_stats.py::get_list_stats`
+- What's wrong: The by-category breakdown runs over all the items, not just the remaining (non-purchased) items.
+- Why it matters: The frontend team asked for a breakdown of the remaining items to help users when on a grocery trip. Returning the total counts per category misleads the user.
+- Suggested fix: In the for loop, only increment category counts if the item is not purchased. Rename the `"by_category"` key to `"remaining_by_category"` for clarity.
 
 **Issue 2**
-- Location:
-- What's wrong:
-- Why it matters:
-- Suggested fix:
+- Location: `pr2_list_stats.py::get_list_stats`
+- What's wrong: No validation for `list_id`.
+- Why it matters: The function misleadingly returns a successful (though trivial - all zero) payload if `list_id` is invalid. Doesn't match the rest of the app design.
+- Suggested fix: Like the other service functions, raise an error in this service function if there is no `GroceryList` of the given `list_id`.
 
 **Issue 3** *(if found)*
-- Location:
-- What's wrong:
-- Why it matters:
-- Suggested fix:
+- Location: `pr2_list_stats.py::list_stats`
+- What's wrong: No way to catch errors from `get_list_stats` (after fixing Issue 2).
+- Why it matters: Any uncaught errors from the service function breaks the route handling and doesn't return a useful response.
+- Suggested fix: Use a `try-catch` block to handle any service-layer errors (especially the `list_id` not found) and return the appropriate error response and status code.
+
+**Issue 3** *(if found)*
+- Location: `pr2_list_stats.py::get_list_stats`
+- What's wrong: `"uncategorized"` used if category isn't specified for an item.
+- Why it matters: In a rare edge case, a user deliberately have created a category called `"uncategorized"`, leading to truly category-null items to merge with the user's categorized items. This misleads the user with a false count.
+- Suggested fix: Use a stronger, more unique sentinel value or perhaps a different data-type. If you revise the sentinel value, please make another PR validating all endpoints against accepting any category names equal to that sentinel value to avoid this silent merge.
 
 ### Questions for the Author
 *A good code review often surfaces design questions, not just bugs. What would you want to clarify before approving?*
 
->
+> What is your reasoning behind including all of `"total items"`, `"purchased"`, and `"remaining"` even though two can be used to find the third?
 
 ### Verdict
 - [ ] Approve — ship it
-- [ ] Request Changes — needs fixes before merging
+- [x] Request Changes — needs fixes before merging
 - [ ] Comment — needs discussion before a verdict
 
 **Rationale** *(1–2 sentences)*:
 
->
+> The code works on the happy path but it needs revision to address semantic issues and inconsistencies with the rest of the app.
 
 ---
 
@@ -98,12 +104,12 @@ For each issue you find, note: where it is (file + function), what's wrong, and 
 
 **1.** Which issue was hardest to spot, and why?
 
->
+> The semantic issue in `pr2_list_stats.py` was harder to spot because it isn't a flat out runtime error or edge case. Rather, it's a hidden inconsistency with user/frontend team expectations and the backend behavior. It's something that needs rigorous code review to spot on the first go. Otherwise, it may stay undetected until it causes another issue down the line.
 
 **2.** Which issues do you think an LLM reviewer (like Claude reviewing its own code) would most likely miss? Why?
 
->
+> An LLM reviewer may miss the overall repo context that new PRs will fit into, especially for large repositories that would consume a large number of tokens if LLMs scan it completely.
 
 **3.** One thing you'd add to a code review checklist for AI-generated backend code:
 
->
+> After seeing the two PRs, I would add "Ensure input validation (existence checking for required parameters at the route handler and existence check for IDs in service function)" to help the reviewer by catching such bugs easily and mainly leaving design-related bugs to critique about.
